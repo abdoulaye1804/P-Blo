@@ -1,0 +1,238 @@
+# ─────────────────────────────────────────────────────────────────
+# SERVICE ACCOUNTS
+# L'annotation eks.amazonaws.com/role-arn est lue par EKS
+# pour injecter automatiquement les credentials AWS dans le pod.
+# Les ARNs sont générés par Terraform (output finops_*_role_arn).
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector-sa
+  namespace: finops
+  annotations:
+    # Remplacer par l'output Terraform : finops_collector_role_arn
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/finops-autopilot-finops-collector"
+  labels:
+    app.kubernetes.io/component: collector
+    app.kubernetes.io/part-of: finops-autopilot
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: policy-engine-sa
+  namespace: finops
+  annotations:
+    # Remplacer par l'output Terraform : finops_policy_engine_role_arn
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/finops-autopilot-finops-policy-engine"
+  labels:
+    app.kubernetes.io/component: policy-engine
+    app.kubernetes.io/part-of: finops-autopilot
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: analyzer-sa
+  namespace: finops
+  labels:
+    app.kubernetes.io/component: analyzer
+    app.kubernetes.io/part-of: finops-autopilot
+
+---
+
+# ─────────────────────────────────────────────────────────────────
+# RBAC — CLUSTER ROLE (lecture métriques K8s)
+# Nécessaire pour que le collector lise les pods, nodes et métriques
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: finops-collector-role
+  labels:
+    app.kubernetes.io/part-of: finops-autopilot
+rules:
+  # Lecture des ressources compute
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "namespaces", "persistentvolumes", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  # Lecture des métriques (Metrics Server)
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+  # Lecture des workloads
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  # Lecture des HPA
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: finops-collector-binding
+  labels:
+    app.kubernetes.io/part-of: finops-autopilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: finops-collector-role
+subjects:
+  - kind: ServiceAccount
+    name: collector-sa
+    namespace: finops
+
+---
+
+# ─────────────────────────────────────────────────────────────────
+# RBAC — POLICY ENGINE (peut modifier les workloads)
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: finops-policy-engine-role
+  labels:
+    app.kubernetes.io/part-of: finops-autopilot
+rules:
+  # Lecture
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  # Modification des deployments (scale down)
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  # Modification HPA
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  # Suppression de pods idle
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: finops-policy-engine-binding
+  labels:
+    app.kubernetes.io/part-of: finops-autopilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: finops-policy-engine-role
+subjects:
+  - kind: ServiceAccount
+    name: policy-engine-sa
+    namespace: finops
+
+---
+
+# ─────────────────────────────────────────────────────────────────
+# DEPLOYMENT — COLLECTOR
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector
+  namespace: finops
+  labels:
+    app: collector
+    app.kubernetes.io/component: collector
+    app.kubernetes.io/part-of: finops-autopilot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: collector-sa
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+
+      containers:
+        - name: collector
+          image: ghcr.io/YOUR_ORG/finops-autopilot/collector:latest
+          imagePullPolicy: Always
+          ports:
+            - name: metrics
+              containerPort: 8000
+              protocol: TCP
+
+          env:
+            - name: AWS_REGION
+              value: "eu-west-1"
+            - name: COLLECT_INTERVAL_SECONDS
+              value: "300"
+            - name: METRICS_PORT
+              value: "8000"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+      restartPolicy: Always
+
+---
+
+# ─────────────────────────────────────────────────────────────────
+# SERVICE — COLLECTOR (pour Prometheus scraping)
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector
+  namespace: finops
+  labels:
+    app: collector
+    app.kubernetes.io/part-of: finops-autopilot
+spec:
+  selector:
+    app: collector
+  ports:
+    - name: metrics
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

@@ -1,0 +1,177 @@
+{
+  "title": "FinOps Autopilot — Savings & Actions",
+  "uid": "finops-savings-report",
+  "tags": ["finops", "savings", "actions"],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+
+    {
+      "id": 1,
+      "title": "💚 Économies totales réalisées ce mois",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": { "fixedColor": "green", "mode": "fixed" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(increase(finops_savings_total_usd[30d]))",
+        "legendFormat": "Économies mensuelles"
+      }]
+    },
+
+    {
+      "id": 2,
+      "title": "⚡ Actions exécutées (7 derniers jours)",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 4 },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": { "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "targets": [{
+        "expr": "sum(increase(finops_actions_executed_total[7d]))",
+        "legendFormat": "Actions exécutées"
+      }]
+    },
+
+    {
+      "id": 3,
+      "title": "⏳ Actions en attente d'approbation",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_pending_approvals_total",
+        "legendFormat": "En attente"
+      }]
+    },
+
+    {
+      "id": 4,
+      "title": "📊 Économies cumulées dans le temps",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 9 },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "increase(finops_savings_total_usd[1h])",
+          "legendFormat": "Économies / heure"
+        },
+        {
+          "expr": "increase(finops_savings_ec2_usd[1h])",
+          "legendFormat": "EC2 idle"
+        },
+        {
+          "expr": "increase(finops_savings_ebs_usd[1h])",
+          "legendFormat": "Volumes EBS"
+        },
+        {
+          "expr": "increase(finops_savings_k8s_usd[1h])",
+          "legendFormat": "Pods K8s"
+        }
+      ]
+    },
+
+    {
+      "id": 5,
+      "title": "🎯 Actions par type (7 jours)",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 13, "w": 8, "h": 8 },
+      "options": {
+        "pieType": "donut",
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "targets": [{
+        "expr": "sum by (action_type) (increase(finops_actions_executed_total[7d]))",
+        "legendFormat": "{{action_type}}"
+      }]
+    },
+
+    {
+      "id": 6,
+      "title": "📋 Violations par politique (7 jours)",
+      "type": "piechart",
+      "gridPos": { "x": 8, "y": 13, "w": 8, "h": 8 },
+      "options": {
+        "pieType": "donut",
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "targets": [{
+        "expr": "sum by (policy) (increase(finops_violations_total[7d]))",
+        "legendFormat": "{{policy}}"
+      }]
+    },
+
+    {
+      "id": 7,
+      "title": "✅ Taux d'approbation",
+      "type": "gauge",
+      "gridPos": { "x": 16, "y": 13, "w": 8, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_actions_approved_total / (finops_actions_approved_total + finops_actions_rejected_total) * 100",
+        "legendFormat": "Taux d'approbation"
+      }]
+    }
+
+  ]
+}

@@ -1,0 +1,62 @@
+---
+# ─────────────────────────────────────────────────────────────────
+# POLITIQUE : Pods Kubernetes idle
+# Détecte les pods dont CPU < seuil depuis X heures
+# et applique une action (notify, scale_down, delete)
+# ─────────────────────────────────────────────────────────────────
+
+name: idle-pods
+version: "1.0"
+description: "Détecte et remédie aux pods sous-utilisés en CPU et mémoire"
+enabled: true
+
+# Qui est concerné
+scope:
+  resource: pod
+  exclude_namespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - monitoring
+  exclude_labels:
+    finops.autopilot/ignore: "true"   # Poser ce label pour exclure un pod
+
+# Conditions de déclenchement (toutes doivent être vraies)
+conditions:
+  - field: cpu_usage_percent
+    operator: lt
+    value: 5.0
+  - field: mem_usage_percent
+    operator: lt
+    value: 10.0
+  - field: age_hours          # Le pod doit exister depuis au moins X heures
+    operator: gte
+    value: 24
+
+# Actions — exécutées dans l'ordre
+# dry_run: true → log uniquement, aucune action réelle
+actions:
+  - type: notify
+    dry_run: false
+    config:
+      channel: slack
+      message: "Pod idle détecté : {namespace}/{name} — CPU: {cpu_usage_percent}% | Mémoire: {mem_usage_percent}%"
+      require_approval: false   # Notification immédiate, pas d'approval
+
+  - type: scale_down
+    dry_run: false
+    config:
+      target: deployment        # Scale le Deployment parent du pod
+      replicas: 0               # Scale to zero
+      require_approval: true    # Demande une validation Slack avant d'agir
+      approval_timeout_minutes: 30
+
+# Récurrence
+schedule:
+  interval_minutes: 60         # Évaluation toutes les heures
+
+# Métadonnées
+metadata:
+  owner: "platform-team"
+  severity: medium
+  doc_url: "https://github.com/YOUR_ORG/finops-autopilot/docs/policies/idle-pods.md"

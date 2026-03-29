@@ -1,0 +1,49 @@
+---
+# ─────────────────────────────────────────────────────────────────
+# POLITIQUE : Instances EC2 surdimensionnées
+# Détecte les EC2 avec CPU chroniquement bas
+# et recommande un rightsizing ou un arrêt
+# ─────────────────────────────────────────────────────────────────
+
+name: oversized-ec2
+version: "1.0"
+description: "Détecte les instances EC2 dont le CPU moyen est sous 10% sur 24h"
+enabled: true
+
+scope:
+  resource: ec2_instance
+  exclude_tags:
+    finops:ignore: "true"
+    Environment: "prod"       # Ne jamais auto-arrêter une instance de prod
+
+conditions:
+  - field: avg_cpu_percent
+    operator: lt
+    value: 10.0
+  - field: lookback_hours
+    operator: gte
+    value: 24
+
+actions:
+  - type: notify
+    dry_run: false
+    config:
+      channel: slack
+      message: "EC2 idle : {instance_id} ({instance_type}) — CPU moy: {avg_cpu_percent}% sur {lookback_hours}h | Coût estimé: ${monthly_cost}/mois"
+      require_approval: false
+
+  - type: snapshot_and_stop
+    dry_run: true             # dry_run=true : log uniquement pour l'instant
+    config:
+      create_snapshot: true   # Snapshot EBS avant l'arrêt
+      snapshot_retention_days: 30
+      require_approval: true
+      approval_timeout_minutes: 60
+
+schedule:
+  interval_minutes: 360       # Toutes les 6 heures
+
+metadata:
+  owner: "platform-team"
+  severity: high
+  doc_url: "https://github.com/YOUR_ORG/finops-autopilot/docs/policies/oversized-ec2.md"

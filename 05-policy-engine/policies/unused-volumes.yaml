@@ -1,0 +1,46 @@
+---
+# ─────────────────────────────────────────────────────────────────
+# POLITIQUE : Volumes EBS non attachés
+# Snapshot puis suppression des volumes "available"
+# ─────────────────────────────────────────────────────────────────
+
+name: unused-volumes
+version: "1.0"
+description: "Snapshot et suppression des volumes EBS non attachés depuis plus de 7 jours"
+enabled: true
+
+scope:
+  resource: ebs_volume
+  exclude_tags:
+    finops:ignore: "true"
+
+conditions:
+  - field: state
+    operator: eq
+    value: "available"
+  - field: age_days
+    operator: gte
+    value: 7
+
+actions:
+  - type: notify
+    dry_run: false
+    config:
+      channel: slack
+      message: "Volume EBS inutilisé : {volume_id} ({size_gb} GB / {volume_type}) — Coût mensuel estimé: ${estimated_monthly_cost_usd}"
+      require_approval: false
+
+  - type: snapshot_and_delete
+    dry_run: false
+    config:
+      snapshot_retention_days: 90
+      require_approval: true
+      approval_timeout_minutes: 120
+
+schedule:
+  interval_minutes: 1440      # Une fois par jour
+
+metadata:
+  owner: "platform-team"
+  severity: low
+  doc_url: "https://github.com/YOUR_ORG/finops-autopilot/docs/policies/unused-volumes.md"

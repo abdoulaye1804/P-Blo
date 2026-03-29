@@ -1,0 +1,71 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    paths:
+      - 'infra/terraform/**'
+
+permissions:
+  id-token: write       # OIDC pour AWS
+  contents: read
+  pull-requests: write  # Pour commenter le plan sur la PR
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan (AWS)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Init
+        working-directory: infra/terraform/aws
+        run: terraform init
+
+      - name: Terraform Format Check
+        working-directory: infra/terraform/aws
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: infra/terraform/aws
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: infra/terraform/aws
+        run: terraform plan -no-color -out=tfplan
+        continue-on-error: true
+
+      # Poster le plan en commentaire sur la PR
+      - name: Comment PR with Plan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Plan 📋
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

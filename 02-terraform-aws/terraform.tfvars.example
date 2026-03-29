@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────
+# EXEMPLE DE CONFIGURATION — ENVIRONNEMENT DEV
+# Copier en terraform.tfvars (ne jamais commiter terraform.tfvars !)
+# ─────────────────────────────────────────────
+
+aws_region      = "eu-west-1"
+environment     = "dev"
+cluster_name    = "finops-autopilot"
+cluster_version = "1.29"
+
+vpc_cidr        = "10.0.0.0/16"
+private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+# Node group — instances légères pour dev
+node_group_instance_types = ["t3.medium"]
+node_group_min_size       = 1
+node_group_max_size       = 3
+node_group_desired_size   = 2
+
+enable_cluster_autoscaler = true
+
+tfstate_bucket_name = "finops-autopilot-tfstate"
+tflock_table_name   = "finops-autopilot-tflock"

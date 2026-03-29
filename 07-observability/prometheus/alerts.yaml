@@ -1,0 +1,70 @@
+groups:
+
+  - name: finops.costs
+    rules:
+
+      - alert: AWSMonthlyCostHigh
+        expr: finops_aws_monthly_cost_usd > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Coût AWS mensuel élevé"
+          description: "Le coût AWS du mois dépasse $1000 (actuel: ${{ $value | printf \"%.2f\" }})"
+
+      - alert: TooManyIdleEC2Instances
+        expr: finops_aws_idle_ec2_instances_total > 5
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Trop d'instances EC2 idle"
+          description: "{{ $value }} instances EC2 idle détectées depuis plus de 15 min"
+
+      - alert: UnusedEBSVolumesCostHigh
+        expr: finops_aws_unused_ebs_volumes_cost_usd > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Coût élevé pour les volumes EBS inutilisés"
+          description: "Les volumes EBS non attachés coûtent ${{ $value | printf \"%.2f\" }}/mois"
+
+  - name: finops.kubernetes
+    rules:
+
+      - alert: TooManyIdlePods
+        expr: finops_k8s_idle_pods_total > 10
+        for: 30m
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "Nombreux pods K8s idle"
+          description: "{{ $value }} pods sous-utilisés détectés depuis 30 min"
+
+      - alert: NodeLowUtilization
+        expr: finops_k8s_node_cpu_usage_percent < 20
+        for: 1h
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "Node sous-utilisé"
+          description: "Node {{ $labels.node }} ({{ $labels.instance_type }}) — CPU: {{ $value | printf \"%.1f\" }}% depuis 1h"
+
+  - name: finops.engine
+    rules:
+
+      - alert: PendingApprovalsStale
+        expr: finops_pending_approvals_total > 0
+        for: 2h
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Actions en attente d'approbation depuis 2h"
+          description: "{{ $value }} action(s) FinOps n'ont pas encore été approuvées ou rejetées"

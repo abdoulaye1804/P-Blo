@@ -1,0 +1,249 @@
+{
+  "title": "FinOps Autopilot — Costs Overview",
+  "uid": "finops-costs-overview",
+  "tags": ["finops", "costs", "aws"],
+  "timezone": "browser",
+  "refresh": "5m",
+  "time": { "from": "now-30d", "to": "now" },
+  "panels": [
+
+    {
+      "id": 1,
+      "title": "💰 Coût AWS total du mois",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_aws_monthly_cost_usd",
+        "legendFormat": "Coût mensuel"
+      }]
+    },
+
+    {
+      "id": 2,
+      "title": "🔴 Instances EC2 idle",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_aws_idle_ec2_instances_total",
+        "legendFormat": "Instances idle"
+      }]
+    },
+
+    {
+      "id": 3,
+      "title": "🗄️ Volumes EBS inutilisés",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "orange", "value": 3 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_aws_unused_ebs_volumes_total",
+        "legendFormat": "Volumes inutilisés"
+      }]
+    },
+
+    {
+      "id": 4,
+      "title": "💸 Coût mensuel volumes EBS inutilisés",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 20 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_aws_unused_ebs_volumes_cost_usd",
+        "legendFormat": "Coût volumes idle"
+      }]
+    },
+
+    {
+      "id": 5,
+      "title": "📈 Coût AWS journalier (30 derniers jours)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "finops_aws_monthly_cost_usd",
+        "legendFormat": "Coût total"
+      }]
+    },
+
+    {
+      "id": 6,
+      "title": "🏆 Top 10 services AWS par coût",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "displayMode": "gradient"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD" }
+      },
+      "targets": [{
+        "expr": "topk(10, finops_aws_service_cost_usd)",
+        "legendFormat": "{{service}}"
+      }]
+    },
+
+    {
+      "id": 7,
+      "title": "☸️ Pods Kubernetes idle",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
+      "options": {
+        "sortBy": [{ "displayName": "CPU %", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "percent" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "namespace" },
+            "properties": [{ "id": "custom.width", "value": 120 }]
+          }
+        ]
+      },
+      "targets": [{
+        "expr": "finops_k8s_pod_cpu_usage_percent",
+        "legendFormat": "{{namespace}} / {{pod}}",
+        "instant": true,
+        "format": "table"
+      }]
+    },
+
+    {
+      "id": 8,
+      "title": "🖥️ Utilisation CPU des nodes",
+      "type": "gauge",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 30 },
+              { "color": "green", "value": 60 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_k8s_node_cpu_usage_percent",
+        "legendFormat": "{{node}} ({{instance_type}})"
+      }]
+    },
+
+    {
+      "id": 9,
+      "title": "💾 Utilisation mémoire des nodes",
+      "type": "gauge",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 40 },
+              { "color": "green", "value": 70 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "finops_k8s_node_mem_usage_percent",
+        "legendFormat": "{{node}} ({{instance_type}})"
+      }]
+    }
+
+  ]
+}
