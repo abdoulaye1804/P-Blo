@@ -31,7 +31,7 @@ abdoulaye1804/P-Blo/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](
 
 <br/>
 
-> 💡 **Résultat :** -30% de dépenses cloud sur l'environnement de test en 3 semaines
+>  **Résultat :** -30% de dépenses cloud sur l'environnement de test en 3 semaines
 > grâce à la détection de 12 instances EC2 idle et 8 volumes EBS orphelins.
 
 <br/>
@@ -40,7 +40,7 @@ abdoulaye1804/P-Blo/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](
 
 ---
 
-## ⚡ Le problème que ce projet résout
+##  Le problème que ce projet résout
 
 | Outil existant | Observe les coûts | Agit automatiquement | Policy-as-Code | K8s natif |
 |---|:---:|:---:|:---:|:---:|
@@ -53,7 +53,7 @@ abdoulaye1804/P-Blo/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -103,9 +103,9 @@ K8s Metrics Server ─┘         │
 
 ---
 
-## ✨ Fonctionnalités clés
+##  Fonctionnalités clés
 
-### 🔍 Détection multi-source
+###  Détection multi-source
 
 ```python
 # Exemple de détection — instances EC2 idle (CPU < 10% sur 24h)
@@ -120,7 +120,7 @@ idle = await aws.get_idle_ec2_instances(cpu_threshold=10.0, lookback_hours=24)
 | EC2 API | Volumes EBS non attachés depuis +7 jours |
 | K8s Metrics Server | Pods avec CPU < 5% et RAM < 10% |
 
-### 📋 Policy-as-Code — règles en YAML
+###  Policy-as-Code — règles en YAML
 
 ```yaml
 # policy-engine/policies/idle-pods.yaml
@@ -150,7 +150,7 @@ actions:
 
 > **Le moteur recharge les politiques à chaque cycle** — modifie un YAML, l'effet est immédiat sans redéploiement.
 
-### 🔐 Sécurité IRSA — zéro credential dans les pods
+###  Sécurité IRSA — zéro credential dans les pods
 
 ```hcl
 # Terraform — chaque service a son propre rôle IAM minimal
@@ -178,7 +178,7 @@ metadata:
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/finops-collector"
 ```
 
-### ✅ Workflow d'approbation Slack
+###  Workflow d'approbation Slack
 
 ```
 Policy Engine détecte une violation
@@ -197,7 +197,7 @@ Action exécutée   Annulé — aucune modification
 
 ---
 
-## 🚀 Démarrage rapide
+##  Démarrage rapide
 
 ### Prérequis
 
@@ -270,7 +270,7 @@ curl localhost:8000/metrics | grep finops_aws_monthly_cost
 
 ---
 
-## 📋 Politiques disponibles
+##  Politiques disponibles
 
 | Politique | Ressource | Condition | Action | Dry-run |
 |---|---|---|---|:---:|
@@ -312,7 +312,7 @@ schedule:
 
 ---
 
-## 📊 Dashboards Grafana
+##  Dashboards Grafana
 
 Deux dashboards prêts à l'emploi dans `07-observability/grafana/dashboards/` :
 
@@ -333,7 +333,7 @@ kubectl port-forward svc/grafana 3000:3000 -n monitoring
 
 ---
 
-## 🔐 Sécurité
+##  Sécurité
 
 ### 3 niveaux de protection contre les actions accidentelles
 
@@ -358,7 +358,7 @@ Niveau 3 : exclude_tags: Environment: prod
 
 ---
 
-## 📁 Structure du projet
+##  Structure du projet
 
 ```
 finops-autopilot/
@@ -408,7 +408,7 @@ finops-autopilot/
 
 ---
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [x] Collector AWS (Cost Explorer + EC2 + EBS)
 - [x] Collector Kubernetes (pods + nodes)
@@ -426,7 +426,7 @@ finops-autopilot/
 
 ---
 
-## 🤝 Contribuer
+##  Contribuer
 
 Les contributions sont les bienvenues ! Consulter [CONTRIBUTING.md](CONTRIBUTING.md) pour les guidelines.
 
@@ -448,7 +448,7 @@ kubectl apply -f infra/kubernetes/base/
 
 ---
 
-## 📄 Licence
+##  Licence
 
 Apache 2.0 — voir [LICENSE](LICENSE).
 
